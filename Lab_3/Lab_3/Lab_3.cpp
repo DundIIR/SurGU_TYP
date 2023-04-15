@@ -6,19 +6,18 @@
 using namespace std;
 
 ifstream infile;
-ofstream  outfile;
 
-enum class TypeErrors //Error codes
+enum TypeErrors
 {
-    SYNTAX_ERROR,
-    UNDEF_ID,
-    ID_MISS,
-    MISSING_SYMBOL,
+    SYNTAX_ERROR,       //Синтаксическая ошибка
+    UNDEF_ID,           //Неопределенный идентификатор
+    ID_MISS,            //Недопустимый символ в идентификаторе
+    MISSING_SYMBOL,     //Отсутствующий символ
 };
 
 enum bool_str 
 {
-    FALSE,
+    FALSE,              
     TRUE,
     VAR
 };
@@ -29,18 +28,18 @@ public:
     string IdName;
     bool value;
 
-
     Var(const string& src, bool value);
 };
 
-class Analizer
+class Analyzer
 {
 private:
     vector<Var> varList; 
     int c = EOF;
     int last = -1; 
-public:
-    inline void GetSymbol(); 
+public: 
+    inline void GetSymbol();
+    inline void GetSymbolSkipSpace();
     bool GetVarValue(string& str); 
     bool& GetVarAdress(string name); 
 
@@ -48,8 +47,8 @@ public:
     bool MethodE();
     bool MethodT();
     bool MethodM();
-    bool MethodI(string& str);
     bool& MethodL();
+    bool MethodI(string& str);
     bool_str MethodC(string& str);
 
     void Print(); 
@@ -57,25 +56,25 @@ public:
     void Run(); 
 };
 
-static void PrintError(TypeErrors typeer, std::string param = "")
+static void PrintError(TypeErrors typeer, string param = "")
 {
     switch (typeer)
     {
-    case TypeErrors::SYNTAX_ERROR:
-        std::cout << "Error: Syntax error. " << std::endl;
+    case SYNTAX_ERROR:
+        cout << "Error: Syntax error. " << "\n" << endl;
         break;
-    case TypeErrors::ID_MISS:
-        std::cout << "Error: Invalid character in identifier. " << param << std::endl;
+    case ID_MISS:
+        cout << "Error: Invalid character in identifier. " << param << "\n" << endl;
         break;
-    case TypeErrors::UNDEF_ID:
-        std::cout << "Error: Undefined identifier: " << param << std::endl;
+    case UNDEF_ID:
+        cout << "Error: Undefined identifier: " << param << "\n" << endl;
         break;
-    case TypeErrors::MISSING_SYMBOL:
-        std::cout << "Error: " << param << "missing." << std::endl;
+    case MISSING_SYMBOL:
+        cout << "Error: " << param << "missing.\n" << endl;
         break;
     }
     infile.close();
-    exit(1);
+    exit(2);
 }
 
 
@@ -85,11 +84,11 @@ int main()
 
     infile.open("text.txt");
     if (!infile.is_open()) {
-        cout << "Файл не удалось открыть!";
+        cout << "The file could not be opened!";
         return 1;
     }
     
-    Analizer start;
+    Analyzer start;
     start.Run();
 
     infile.close();
@@ -98,28 +97,54 @@ int main()
 	return 0;
 }
 
-inline void Analizer::GetSymbol()
+void Analyzer::Run()
+{
+    int i = 0;
+    GetSymbolSkipSpace();
+    for (i; ; i++)
+    {
+        while (c >= 0 && c <= ' ')
+            GetSymbolSkipSpace();
+        if (c == EOF)
+            break;
+        cout << "Operator: " << i + 1 << endl;
+        MethodS();
+        Print();
+    }
+    if(varList.size())
+        cout << "\nResult: \n\tNumber of variables:" << varList.size() << "\n\tNumber of operators:" << i << "\n\nFinal values:\n";
+    PrintAll();
+}
+
+inline void Analyzer::GetSymbol()
 {
     c = infile.get();
 }
 
-bool Analizer::GetVarValue(string& str)
+inline void Analyzer::GetSymbolSkipSpace()
+{
+    c = infile.get();
+    while (c >= 0 && c <= ' ')
+        GetSymbolSkipSpace();
+}
+
+bool Analyzer::GetVarValue(string& str)
 {
     if (str.empty() || str.size() == 0)
-        PrintError(TypeErrors::SYNTAX_ERROR);
+        PrintError(SYNTAX_ERROR);
 
     for (int i = 0; i < varList.size(); i++)
         if (varList[i].IdName == str)
             return varList[i].value;
 
-    PrintError(TypeErrors::UNDEF_ID, str);
+    PrintError(UNDEF_ID, str);
     return false;
 }
 
-bool& Analizer::GetVarAdress(string name)
+bool& Analyzer::GetVarAdress(string name)
 {
     if (name.empty() || name.size() == 0)
-        PrintError(TypeErrors::SYNTAX_ERROR);
+        PrintError(SYNTAX_ERROR);
 
     for (int i = 0; i < varList.size(); i++)
         if (varList[i].IdName == name)
@@ -130,65 +155,65 @@ bool& Analizer::GetVarAdress(string name)
     return varList[last].value;
 }
 
-void Analizer::MethodS()
+void Analyzer::MethodS()
 {
     if (c != '(')
-        PrintError(TypeErrors::MISSING_SYMBOL, "\'=\'");
-    GetSymbol();
+        PrintError(MISSING_SYMBOL, "\'(\'");
+    GetSymbolSkipSpace();
     bool& p = MethodL();
     if (c != ',')
-        PrintError(TypeErrors::MISSING_SYMBOL, "\'=\'");
-    GetSymbol();
+        PrintError(MISSING_SYMBOL, "\',\'");
+    GetSymbolSkipSpace();
     p = MethodE();
-    while (isspace(c))
-    {
-        GetSymbol();
-    }
-    if (c != ')' )
-        PrintError(TypeErrors::MISSING_SYMBOL, "\'=\'");
-    GetSymbol();
+    if (c != ')')
+        PrintError(MISSING_SYMBOL, "\')\'");
+    GetSymbolSkipSpace();
 }
 
-bool Analizer::MethodE()
+bool Analyzer::MethodE()
 {
     bool x = MethodT();
     while (c == '|')
     {
-        GetSymbol();
+        GetSymbolSkipSpace();
         x |= MethodT();
     }
     return x;
 }
 
-bool Analizer::MethodT()
+bool Analyzer::MethodT()
 {
     bool x = MethodM();
     while (c == '&')
     {
-        GetSymbol();
+        GetSymbolSkipSpace();
         x &= MethodM();
     }
     return x;
 }
 
-bool Analizer::MethodM()
+bool Analyzer::MethodM()
 {
     string temp_bool_str = "";
-    bool x;
+    bool x = false;
     if (c == '(')
     {
-        GetSymbol();
+        GetSymbolSkipSpace();
         x = MethodE();
+        if (c == ' ')
+            GetSymbolSkipSpace();
         if (c != ')')
-            PrintError(TypeErrors::MISSING_SYMBOL, "\')\'");
-        GetSymbol();
+            PrintError(MISSING_SYMBOL, "\')\'");
+        GetSymbolSkipSpace();
     }
     else
     {
         if (c == '~')
         {
-            GetSymbol();
+            GetSymbolSkipSpace();
             x = !MethodM();
+            if (c == ' ')
+                GetSymbolSkipSpace();
         }
         else
             if (c == 't' || c == 'f')
@@ -201,67 +226,35 @@ bool Analizer::MethodM()
                     x = false;
                     break;
                 case VAR:
-                    if (c >= 'a' && c <= 'z')
+                    if ((c >= 'a' && c <= 'z') || !temp_bool_str.empty())
                         x = MethodI(temp_bool_str);
                     else
-                        PrintError(TypeErrors::SYNTAX_ERROR);
+                        PrintError(SYNTAX_ERROR);
                 }
             else
                 if (c >= 'a' && c <= 'z')
                     x = MethodI(temp_bool_str);
                 else
-                    PrintError(TypeErrors::SYNTAX_ERROR);
+                    PrintError(SYNTAX_ERROR);
     }
-
+    if (c == ' ')
+        GetSymbolSkipSpace();
     return x;
 }
 
-bool Analizer::MethodI(string& str)
-{
-    bool flag = false;
-    while ((c >= 'a' && c <= 'z'))
-    {
-        str.push_back(c);
-        GetSymbol();
-        /*if (!(c >= 'a' && c <= 'z') && c != '=')
-            flag = false;
-        else*/
-            flag = true;
-    }
-    if (!flag)
-        PrintError(TypeErrors::ID_MISS, string(1, (char)c));
-    return GetVarValue(str);
-}
-
-bool& Analizer::MethodL()
-{
-    string str;
-    bool flag = false;
-    while ((c >= 'a' && c <= 'z'))
-    {
-        str.push_back(c);
-        GetSymbol();
-        /*if (!(c >= 'a' && c <= 'z') && c != ',')
-            flag = false;
-        else*/
-            flag = true;
-    }
-    if (!flag)
-        PrintError(TypeErrors::ID_MISS, string(1, (char)c));
-    return GetVarAdress(str);
-}
-
-bool_str Analizer::MethodC(string& str)
+bool_str Analyzer::MethodC(string& str)
 {
     str += c;
     string temp_true = "true ";
     string temp_false = "false ";
-    for (int i = 0;; GetSymbol(), str += c, i++)
+    GetSymbol();
+    for (int i = 1;; GetSymbol(), i++)
     {
         if (str[0] == 't')
         {
             if (c == temp_true[i] && i <= 3)
             {
+                str += c;
                 continue;
             }
             else if (!(c >= 'a' && c <= 'z') && i == 4)
@@ -277,6 +270,7 @@ bool_str Analizer::MethodC(string& str)
         {
             if (c == temp_false[i] && i <= 4)
             {
+                str += c;
                 continue;
             }
             else if (!(c >= 'a' && c <= 'z') && i == 5)
@@ -292,45 +286,88 @@ bool_str Analizer::MethodC(string& str)
     return VAR;
 }
 
-void Analizer::Print()
+bool& Analyzer::MethodL()
+{
+    string str;
+    bool flag = false;
+    while ((c >= 'a' && c <= 'z'))
+    {
+        str.push_back(c);
+        GetSymbol();
+        if (c == ' ')
+        {
+            GetSymbolSkipSpace();
+            if (c != ',')
+            {
+                flag = false;
+                break;
+            }
+        }
+        else if (!(c >= 'a' && c <= 'z') && c != ',')
+            flag = false;
+        else
+            flag = true;
+    }
+    if (!flag)
+        PrintError(ID_MISS, string(1, char(c)));
+    if (str == "true" || str == "false")
+        PrintError(SYNTAX_ERROR);
+    return GetVarAdress(str);
+}
+
+bool Analyzer::MethodI(string& str)
+{
+    
+    bool flag = false;
+
+    if (!str.empty())
+    {
+        flag = true;
+    }
+    while ((c >= 'a' && c <= 'z'))
+    {
+        str.push_back(c);
+        GetSymbol();
+        if (c == ' ')
+        {
+            GetSymbolSkipSpace();
+            if (c != '|' && c != '&' && c != ')')
+            {
+                flag = false;
+                break;
+            }
+        }
+        else if (!(c >= 'a' && c <= 'z') && c != '|' && c != '&' && c != ')')
+            flag = false;
+        else
+            flag = true;
+    }
+    if (!flag)
+        PrintError(ID_MISS, string(1, char(c)));
+    return GetVarValue(str);
+}
+
+
+
+void Analyzer::Print()
 {
     string txt;
-    if (varList.size() == 0)
+    if (!varList.size())
         cout << "No varibales defined yet.\n";
     else
         txt = varList[last].value ? "true" : "false";
         cout << varList[last].IdName << " = " << txt << endl;
 }
 
-void Analizer::PrintAll()
+void Analyzer::PrintAll()
 {
-    string txt;
     if (!varList.size())
-        printf("No variables defined yet.\n");
+        cout << "No varibales defined yet.\n";
     else
-        for (int i = 0; i < varList.size(); i++)
+        for (last = 0; last < varList.size(); last++)
         {
-            txt = varList[last].value ? "true" : "false";
-            cout << varList[i].IdName << " = " << txt << endl;
+            Print();
         }
 }
 
-void Analizer::Run()
-{
-    int i = 0;
-    GetSymbol();
-    for (i; ; i++)
-    {
-        while (c >= 0 && c <= ' ')
-            GetSymbol();
-        if (c == EOF)
-            break;
-        cout << "Оператор: " << i + 1 << endl;
-        MethodS();
-        Print();
-    }
-    cout << "\nРезультат: \n\tКоличество переменных:" << varList.size() << "\n\tКоличество операторов:" << i << "\n\nКонечные значения:\n";
-    PrintAll();
-}
-
-Var::Var(const std::string& src, bool value) :IdName{ src }, value{ value } {}
+Var::Var(const string& src, bool value) :IdName{ src }, value{ value } {}
