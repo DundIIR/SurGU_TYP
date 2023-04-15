@@ -9,10 +9,10 @@ ifstream infile;
 
 enum TypeErrors
 {
-    SYNTAX_ERROR,       //Синтаксическая ошибка
-    UNDEF_ID,           //Неопределенный идентификатор
-    ID_MISS,            //Недопустимый символ в идентификаторе
-    MISSING_SYMBOL,     //Отсутствующий символ
+    SYNTAX_ERROR,       //РЎРёРЅС‚Р°РєСЃРёС‡РµСЃРєР°СЏ РѕС€РёР±РєР°
+    UNDEF_ID,           //РќРµРѕРїСЂРµРґРµР»РµРЅРЅС‹Р№ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ
+    ID_MISS,            //РќРµРґРѕРїСѓСЃС‚РёРјС‹Р№ СЃРёРјРІРѕР» РІ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂРµ
+    MISSING_SYMBOL,     //РћС‚СЃСѓС‚СЃС‚РІСѓСЋС‰РёР№ СЃРёРјРІРѕР»
 };
 
 enum bool_str 
@@ -370,4 +370,4 @@ void Analyzer::PrintAll()
         }
 }
 
-Var::Var(const string& src, bool value) :IdName{ src }, value{ value } {}
+Var::Var(const string& src, bool value) : IdName(src), value(value) {}
