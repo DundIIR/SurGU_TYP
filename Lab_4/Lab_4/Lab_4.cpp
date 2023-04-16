@@ -27,10 +27,10 @@ enum bool_str
 
 class Var
 {
-public:
+private:
     string IdName;
     bool value;
-
+public:
     Var(const string& src, bool value);
     string GetIdName();
 };
@@ -43,16 +43,16 @@ private:
 public:
     inline void GetSymbol();
     inline void GetSymbolSkipSpace();
-    bool GetVarValue(string& str);
+    long GetVarValue(string& str);
     long GetVarAdress(string name);
 
     void MethodS();
-    bool MethodE();
-    bool MethodT();
-    bool MethodM();
+    long MethodE();
+    long MethodT();
+    long MethodM();
     long MethodL();
-    bool MethodI(string& str);
-    bool_str MethodC(string& str);
+    long MethodI(string& str);
+    long MethodC(string& str);
 
     void Run();
 };
@@ -111,10 +111,11 @@ void Analyzer::Run()
     GetSymbol();
     for (i; ; i++)
     {
-        while(c >= 0 || c <= ' ')
+        while(c >= 0 && c <= ' ')
             GetSymbolSkipSpace();
         if (c == EOF)
             break;
+        outfile << i+1 << ")";
         MethodS();
     }
 }
@@ -131,17 +132,21 @@ inline void Analyzer::GetSymbolSkipSpace()
         GetSymbolSkipSpace();
 }
 
-bool Analyzer::GetVarValue(string& str)
+long Analyzer::GetVarValue(string& str)
 {
     if (str.empty() || str.size() == 0)
         PrintError(SYNTAX_ERROR);
 
     for (int i = 0; i < varList.size(); i++)
-        if (varList[i].IdName == str)
-            return varList[i].value;
+        if (varList[i].GetIdName() == str)
+        {
+            IdTriad++;
+            outfile << "\t" << IdTriad << ":  " << "V(" << str << ", @)\n";
+            return IdTriad;
+        }
 
     PrintError(UNDEF_ID, str);
-    return false;
+    return 0;
 }
 
 long Analyzer::GetVarAdress(string name)
@@ -153,13 +158,13 @@ long Analyzer::GetVarAdress(string name)
         if (varList[i].GetIdName() == name)
         {
             IdTriad++;
-            outfile << IdTriad << " : " << "V(" << name << ", @)\n";
+            outfile << "\t" << IdTriad << ":  " << "V(" << name << ", @)\n";
             return IdTriad;
         }
 
     varList.push_back(Var{ name, 0 });
     IdTriad++;
-    outfile << IdTriad << " : " << "V(" << name << ", @)\n";
+    outfile << "\t" << IdTriad << ":  " << "V(" << name << ", @)\n";
     return IdTriad;
 }
 
@@ -175,138 +180,13 @@ void Analyzer::MethodS()
     long p2 = MethodE();
     if (c != ')')
         PrintError(MISSING_SYMBOL, "\')\'");
-    GetSymbol;
-    if (!isspace(c))
+    GetSymbol();
+    if (!isspace(c) && c != EOF)
         PrintError(SYNTAX_ERROR);
 
     IdTriad++;
-    outfile << IdTriad << " : " << "=(^" << p1 << ", ^" << p2 << ")\n";
+    outfile << "\t" << IdTriad << ":  " << "=(^" << p1 << ", ^" << p2 << ")\n";
     GetSymbolSkipSpace();
-}
-
-bool Analyzer::MethodE()
-{
-    long x1 = MethodT();
-    while (c == '|')
-    {
-        long x2;
-        GetSymbolSkipSpace();
-        x2 |= MethodT();
-        IdTriad++;
-        outfile << IdTriad << " : " << "|(^" << x1 << ", " << "^" << x2 << ")\n";
-        x1 = IdTriad;
-    }
-    return x1;
-}
-
-bool Analyzer::MethodT()
-{
-    long x1 = MethodM();
-    while (c == '&')
-    {
-        long x2;
-        GetSymbolSkipSpace();
-        x2 &= MethodM();
-        IdTriad++;
-        outfile << IdTriad << " : " << "&(^" << x1 << ", " << "^" << x2 << ")\n";
-        x1 = IdTriad;
-    }
-    return x1;
-}
-
-bool Analyzer::MethodM()
-{
-    string temp_bool_str = "";
-    long x;
-    if (c == '(')
-    {
-        GetSymbolSkipSpace();
-        x = MethodE();
-        if (c == ' ')
-            GetSymbolSkipSpace();
-        if (c != ')')
-            PrintError(MISSING_SYMBOL, "\')\'");
-        GetSymbolSkipSpace();
-    }
-    else
-    {
-        if (c == '~')
-        {
-            GetSymbolSkipSpace();
-            x = !MethodM();
-
-            if (c == ' ')
-                GetSymbolSkipSpace();
-        }
-        else
-            if (c == 't' || c == 'f')
-                switch (MethodC(temp_bool_str))
-                {
-                case TRUE:
-                    x = true;
-                    break;
-                case FALSE:
-                    x = false;
-                    break;
-                case VAR:
-                    if ((c >= 'a' && c <= 'z') || !temp_bool_str.empty())
-                        x = MethodI(temp_bool_str);
-                    else
-                        PrintError(SYNTAX_ERROR);
-                }
-            else
-                if (c >= 'a' && c <= 'z')
-                    x = MethodI(temp_bool_str);
-                else
-                    PrintError(SYNTAX_ERROR);
-    }
-    if (c == ' ')
-        GetSymbolSkipSpace();
-    return x;
-}
-
-bool_str Analyzer::MethodC(string& str)
-{
-    str += c;
-    string temp_true = "true ";
-    string temp_false = "false ";
-    GetSymbol();
-    for (int i = 1;; GetSymbol(), i++)
-    {
-        if (str[0] == 't')
-        {
-            if (c == temp_true[i] && i <= 3)
-            {
-                str += c;
-                continue;
-            }
-            else if (!(c >= 'a' && c <= 'z') && i == 4)
-            {
-                return TRUE;
-            }
-            else
-            {
-                break;
-            }
-        }
-        else
-        {
-            if (c == temp_false[i] && i <= 4)
-            {
-                str += c;
-                continue;
-            }
-            else if (!(c >= 'a' && c <= 'z') && i == 5)
-            {
-                return FALSE;
-            }
-            else
-            {
-                break;
-            }
-        }
-    }
-    return VAR;
 }
 
 long Analyzer::MethodL()
@@ -338,38 +218,123 @@ long Analyzer::MethodL()
     return GetVarAdress(str);
 }
 
-bool Analyzer::MethodI(string& str)
+long Analyzer::MethodE()
+{
+    long x1 = MethodT();
+    while (c == '|')
+    {
+        long x2;
+        GetSymbolSkipSpace();
+        x2 |= MethodT();
+        IdTriad++;
+        outfile << "\t" << IdTriad << ":  " << "|(^" << x1 << ", " << "^" << x2 << ")\n";
+        x1 = IdTriad;
+    }
+    return x1;
+}
+
+long Analyzer::MethodT()
+{
+    long x1 = MethodM();
+    while (c == '&')
+    {
+        long x2;
+        GetSymbolSkipSpace();
+        x2 &= MethodM();
+        IdTriad++;
+        outfile << "\t" << IdTriad << ":  " << "&(^" << x1 << ", " << "^" << x2 << ")\n";
+        x1 = IdTriad;
+    }
+    return x1;
+}
+
+long Analyzer::MethodM()
+{
+    string temp_bool_str = "";
+    long x;
+    if (c == '(')
+    {
+        GetSymbolSkipSpace();
+        x = MethodE();
+        if (c == ' ')
+            GetSymbolSkipSpace();
+        if (c != ')')
+            PrintError(MISSING_SYMBOL, "\')\'");
+        GetSymbolSkipSpace();
+    }
+    else
+    {
+        if (c == '~')
+        {
+            GetSymbolSkipSpace();
+            x = MethodM();
+            IdTriad++;
+            outfile << "\t" << IdTriad << ":  " << "~(^" << x << ", @)\n";
+            x = IdTriad;
+            if (c == ' ')
+                GetSymbolSkipSpace();
+        }
+        else
+            for (string temp_var = ""; ;GetSymbol())
+            {                                                                 
+                if (c >= 'a' && c <= 'z') {
+                    temp_var += c;
+                }
+                else if (temp_var == "true" || temp_var == "false") {
+                    x = MethodC(temp_var);
+                    break;
+                }
+                else if (!temp_var.empty()) {
+                    x = MethodI(temp_var);
+                    break;
+                }
+                else {
+                    PrintError(SYNTAX_ERROR);
+                }
+            }
+    }
+    if (c == ' ')
+        GetSymbolSkipSpace();
+    return x;
+}
+
+long Analyzer::MethodC(string& str)
+{
+    bool x;
+    if (str[0] == 't') 
+    {
+        x = true;
+    }
+    else
+    {
+        x = false;
+    }
+    IdTriad++;
+    outfile << "\t" << IdTriad << ":  " << "C(" << x << ", @)\n";
+    return IdTriad;
+}
+
+long Analyzer::MethodI(string& str)
 {
 
     bool flag = false;
 
+    if (c == ' ') 
+    {
+        GetSymbolSkipSpace();
+    }
     if (!str.empty())
     {
         flag = true;
     }
-    while ((c >= 'a' && c <= 'z'))
+    if (c != '|' && c != '&' && c != ')')
     {
-        str.push_back(c);
-        GetSymbol();
-        if (c == ' ')
-        {
-            GetSymbolSkipSpace();
-            if (c != '|' && c != '&' && c != ')')
-            {
-                flag = false;
-                break;
-            }
-        }
-        else if (!(c >= 'a' && c <= 'z') && c != '|' && c != '&' && c != ')')
-            flag = false;
-        else
-            flag = true;
+        flag = false;
     }
     if (!flag)
         PrintError(ID_MISS, string(1, char(c)));
     return GetVarValue(str);
 }
-
 
 
 Var::Var(const string& src, bool value) : IdName(src), value(value) {}
