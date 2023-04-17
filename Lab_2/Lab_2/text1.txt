@@ -1,0 +1,31 @@
+5.9l long
+6.e
+ error
+7.4a error
+4.7 double
+6.9l long
+7.4a error
+4.7 double
+1.2 double
+.5. error
+17e3 double
+11.333 double
+8E+
+ error
+9E-12 double
+9.E12 double
+.7b error
+1.e34l long
+3.4f float
+5. double
+.12e
+ error
+5.9l long
+6.e
+ error
+1.f float
+0. double
+.2 double
+455.l long
+77. double
+22.ek error
