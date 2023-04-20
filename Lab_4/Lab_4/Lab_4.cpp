@@ -223,9 +223,9 @@ long Analyzer::MethodE()
     long x1 = MethodT();
     while (c == '|')
     {
-        long x2;
+        long x2 = 0;
         GetSymbolSkipSpace();
-        x2 |= MethodT();
+        x2 = MethodT();
         IdTriad++;
         outfile << "\t" << IdTriad << ":  " << "|(^" << x1 << ", " << "^" << x2 << ")\n";
         x1 = IdTriad;
@@ -238,9 +238,9 @@ long Analyzer::MethodT()
     long x1 = MethodM();
     while (c == '&')
     {
-        long x2;
+        long x2 = 0;
         GetSymbolSkipSpace();
-        x2 &= MethodM();
+        x2 = MethodM();
         IdTriad++;
         outfile << "\t" << IdTriad << ":  " << "&(^" << x1 << ", " << "^" << x2 << ")\n";
         x1 = IdTriad;
