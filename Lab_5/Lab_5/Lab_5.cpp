@@ -6,9 +6,9 @@
 using namespace std;
 
 ifstream infile;
-ofstream outfile;
+ofstream outfile1;
+ofstream outfile2;
 int IdTriad = 0;
-
 
 enum TypeErrors
 {
@@ -18,31 +18,70 @@ enum TypeErrors
     MISSING_SYMBOL,     //Отсутствующий символ
 };
 
-enum bool_str
+class Base
 {
-    FALSE,
-    TRUE,
-    VAR
+public:
+    virtual string GetOperand() = 0;
+    virtual ~Base();
 };
 
-class Var
+class Var : public Base
 {
 private:
     string IdName;
-    bool value;
 public:
-    Var(const string& src, bool value);
-    string GetIdName();
+    Var(const string& src);
+    string GetOperand() override;
 };
+
+class Link : public Base
+{
+public:
+    long linkTriad;
+
+    Link(const long linkTriad);
+    string GetOperand() override;
+};
+
+class Constant : public Base
+{
+public:
+    bool value;
+
+    Constant(const bool value);
+    string GetOperand() override;
+};
+
+class None : public Base
+{
+    string GetOperand() override;
+};
+
+
+
+class Triad
+{
+public:
+    char operation;
+    Base* leftOperand;
+    Base* rightOperand;
+    bool isDelete = false;
+
+    Triad(char operation, Base* leftOperand, Base* rightOperand);
+    void OutTriad();
+};
+
 
 class Analyzer
 {
 private:
     vector<Var> varList;
+    vector<Triad> triadList;
     int c = EOF;
 public:
     inline void GetSymbol();
     inline void GetSymbolSkipSpace();
+
     long GetVarValue(string& str);
     long GetVarAdress(string name);
 
@@ -55,7 +94,11 @@ public:
     long MethodC(string& str);
 
     void Run();
+
+    void Optimization();
 };
+
+
 
 static void PrintError(TypeErrors typeer, string param = "")
 {
@@ -75,23 +118,21 @@ static void PrintError(TypeErrors typeer, string param = "")
         break;
     }
     infile.close();
-    outfile.close();
+    outfile1.close();
+    outfile2.close();
     exit(2);
 }
+
 
 
 int main()
 {
     setlocale(LC_ALL, "ru");
 
-    infile.open("text.txt");
-    if (!infile.is_open()) {
-        cout << "The file could not be opened!";
-        return 1;
-    }
-    outfile.open("outfile.txt");
-    if (!outfile.is_open()) {
-        infile.close();
+    infile.open("infile.txt");
+    outfile1.open("outfile1.txt");
+    outfile2.open("outfile2.txt");
+    if (!infile.is_open() || !outfile1.is_open() || !outfile2.is_open()) {
         cout << "The file could not be opened!";
         return 1;
     }
@@ -100,7 +141,8 @@ int main()
     start.Run();
 
     infile.close();
-    outfile.close();
+    outfile1.close();
+    outfile2.close();
     system("pause");
     return 0;
 }
@@ -115,8 +157,90 @@ void Analyzer::Run()
             GetSymbolSkipSpace();
         if (c == EOF)
             break;
-        outfile << i + 1 << ")";
         MethodS();
+    }
+    i = 0;
+    for (int i = 0; i < triadList.size(); i++)
+    {
+        outfile1 << i + 1 << " : ";
+        triadList[i].OutTriad();
+    }
+    Optimization();
+    int j = 0;
+    for (int i = 0; i < triadList.size(); i++)
+    {
+        if (!triadList[i].isDelete)
+        {
+            outfile2 << i + 1 << " : ";
+            outfile2 << triadList[i].operation << '(' << triadList[i].leftOperand->GetOperand() << ", " << triadList[i].rightOperand->GetOperand() << ')' << std::endl;
+        }
+        else
+        {
+            outfile2 << i + 1 << " : \n";
+        }
+
+    }
+}
+
+void Analyzer::Optimization()
+{
+    int left_id = 0, right_id = 0;
+
+    for (int i = 0; i < triadList.size(); i++)
+    {
+        try {
+            left_id = stoi(triadList[i].leftOperand->GetOperand().substr(1)) - 1;
+            right_id = stoi(triadList[i].rightOperand->GetOperand().substr(1)) - 1;
+
+            switch (triadList[i].operation)
+            {
+            case '|': 
+            case '&':
+                if (triadList[right_id].operation == 'C')
+                {
+                    triadList[right_id].isDelete = true;
+                    triadList[i].rightOperand = new Constant{ static_cast<bool>(stoi(triadList[right_id].leftOperand->GetOperand())) };
+                    if (triadList[left_id].operation == 'C')
+                    {
+                        triadList[left_id].isDelete = true;
+                        triadList[i].leftOperand = new Constant{ static_cast<bool>(stoi(triadList[left_id].leftOperand->GetOperand())) };
+
+                        triadList[i].operation = 'C';
+                        if (triadList[i].operation == '|')
+                        {
+                            triadList[i].leftOperand = new Constant{ static_cast<bool>(stoi(triadList[left_id].leftOperand->GetOperand()) |
+                                                                                       stoi(triadList[right_id].leftOperand->GetOperand())) };
+                        }
+                        else
+                        {
+                            triadList[i].leftOperand = new Constant{ static_cast<bool>(stoi(triadList[left_id].leftOperand->GetOperand()) &
+                                                                                       stoi(triadList[right_id].leftOperand->GetOperand())) };
+                        }
+                        triadList[i].rightOperand = new None{};
+                    }
+                }
+
+                break;
+            case '~':
+                if (triadList[left_id].operation == 'C')
+                {
+                    triadList[left_id].isDelete = true;
+                    triadList[i].leftOperand = new Constant{ static_cast<bool>(~(static_cast<bool>(stoi(triadList[right_id].leftOperand->GetOperand()))))};
+                    triadList[i].operation = 'C';
+                }
+                break;
+            case '=':
+                if (triadList[left_id].operation == 'V')
+                {
+                    triadList[left_id].isDelete = true;
+                    triadList[i].leftOperand = new Var{ triadList[left_id].leftOperand->GetOperand() };
+                }
+            }
+        }
+        catch (const std::exception& e) {
+            left_id = 0;
+            right_id = 0;
+        }
     }
 }
 
@@ -138,10 +262,11 @@ long Analyzer::GetVarValue(string& str)
         PrintError(SYNTAX_ERROR);
 
     for (int i = 0; i < varList.size(); i++)
-        if (varList[i].GetIdName() == str)
+        if (varList[i].GetOperand() == str)
         {
+            Triad T('V', new Var{ str }, new None{});
+            triadList.push_back(T);
             IdTriad++;
-            outfile << "\t" << IdTriad << ":  " << "V(" << str << ", @)\n";
             return IdTriad;
         }
 
@@ -155,16 +280,18 @@ long Analyzer::GetVarAdress(string name)
         PrintError(SYNTAX_ERROR);
 
     for (int i = 0; i < varList.size(); i++)
-        if (varList[i].GetIdName() == name)
+        if (varList[i].GetOperand() == name)
         {
+            Triad T('V', new Var{ name }, new None{});
+            triadList.push_back(T);
             IdTriad++;
-            outfile << "\t" << IdTriad << ":  " << "V(" << name << ", @)\n";
             return IdTriad;
         }
 
-    varList.push_back(Var{ name, 0 });
+    varList.push_back(Var{ name });
+    Triad T('V', new Var{ name }, new None{});
+    triadList.push_back(T);
     IdTriad++;
-    outfile << "\t" << IdTriad << ":  " << "V(" << name << ", @)\n";
     return IdTriad;
 }
 
@@ -184,8 +311,9 @@ void Analyzer::MethodS()
     if (!isspace(c) && c != EOF)
         PrintError(SYNTAX_ERROR);
 
+    Triad T('=', new Link{ p1 }, new Link{ p2 });
+    triadList.push_back(T);
     IdTriad++;
-    outfile << "\t" << IdTriad << ":  " << "=(^" << p1 << ", ^" << p2 << ")\n";
     GetSymbolSkipSpace();
 }
 
@@ -226,8 +354,9 @@ long Analyzer::MethodE()
         long x2 = 0;
         GetSymbolSkipSpace();
         x2 = MethodT();
+        Triad T('|', new Link{ x1 }, new Link{ x2 });
+        triadList.push_back(T);
         IdTriad++;
-        outfile << "\t" << IdTriad << ":  " << "|(^" << x1 << ", " << "^" << x2 << ")\n";
         x1 = IdTriad;
     }
     return x1;
@@ -241,8 +370,9 @@ long Analyzer::MethodT()
         long x2 = 0;
         GetSymbolSkipSpace();
         x2 = MethodM();
+        Triad T('&', new Link{ x1 }, new Link{ x2 });
+        triadList.push_back(T);
         IdTriad++;
-        outfile << "\t" << IdTriad << ":  " << "&(^" << x1 << ", " << "^" << x2 << ")\n";
         x1 = IdTriad;
     }
     return x1;
@@ -268,8 +398,9 @@ long Analyzer::MethodM()
         {
             GetSymbolSkipSpace();
             x = MethodM();
+            Triad T('~', new Link{ x }, new None{});
+            triadList.push_back(T);
             IdTriad++;
-            outfile << "\t" << IdTriad << ":  " << "~(^" << x << ", @)\n";
             x = IdTriad;
             if (c == ' ')
                 GetSymbolSkipSpace();
@@ -309,8 +440,9 @@ long Analyzer::MethodC(string& str)
     {
         x = false;
     }
+    Triad T('C', new Constant{ x }, new None{});
+    triadList.push_back(T);
     IdTriad++;
-    outfile << "\t" << IdTriad << ":  " << "C(" << x << ", @)\n";
     return IdTriad;
 }
 
@@ -337,9 +469,40 @@ long Analyzer::MethodI(string& str)
 }
 
 
-Var::Var(const string& src, bool value) : IdName(src), value(value) {}
 
-string Var::GetIdName()
+
+Triad::Triad(char operation, Base* leftOperand, Base* rightOperand) : operation(operation), leftOperand(leftOperand), rightOperand(rightOperand) {}
+
+Var::Var(const string& src) : IdName(src) {}
+
+Link::Link(const long linkTriad) : linkTriad(linkTriad) {}
+
+Constant::Constant(const bool value) : value(value) {}
+
+Base::~Base() {}
+
+string Var::GetOperand()
 {
     return this->IdName;
+}
+
+string Link::GetOperand()
+{
+    return "^" + to_string(this->linkTriad);
+}
+
+string Constant::GetOperand()
+{
+    return to_string(this->value);
+}
+
+string None::GetOperand()
+{
+    return "@";
+}
+
+
+void Triad::OutTriad()
+{
+    outfile1 << operation << '(' << leftOperand->GetOperand() << ", " << rightOperand->GetOperand() << ')' << std::endl;
 }
