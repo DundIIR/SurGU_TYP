@@ -1,11 +1,8 @@
-(trrrs , true)
-(varo, true )
-( var , false )
-(tr, var)
+(t, false | false)
+(tt, true & false)
 
+(ttt, ~false)
 
-(t, ~tr & ( varo    |  var ) )
-(trr,var)
-(var,t)
+(ttt, ~false & (t | tt))
 
-(trre, true & false)
+(tr, ttt)

@@ -159,26 +159,34 @@ void Analyzer::Run()
             break;
         MethodS();
     }
-    i = 0;
-    for (int i = 0; i < triadList.size(); i++)
-    {
-        outfile1 << i + 1 << " : ";
-        triadList[i].OutTriad();
-    }
-    Optimization();
-    int j = 0;
-    for (int i = 0; i < triadList.size(); i++)
-    {
-        if (!triadList[i].isDelete)
-        {
-            outfile2 << i + 1 << " : ";
-            outfile2 << triadList[i].operation << '(' << triadList[i].leftOperand->GetOperand() << ", " << triadList[i].rightOperand->GetOperand() << ')' << std::endl;
-        }
-        else
-        {
-            outfile2 << i + 1 << " : \n";
-        }
 
+    for (int i = 0, j = 1; i < triadList.size(); i++)
+    {
+        if(j == 1)
+            outfile1 << j++ << ")";
+
+        outfile1 << "\t" << i + 1 << " : ";
+        triadList[i].OutTriad();
+
+        if (triadList[i].operation == '=' && i != triadList.size()-1)
+            outfile1 << j++ << ")";
+    }
+
+    Optimization();
+
+    for (int i = 0, j = 1; i < triadList.size(); i++)
+    {
+        if (j == 1)
+            outfile2 << j++ << ")";
+
+        outfile2 << "\t" <<  i + 1 << " : ";
+        if (!triadList[i].isDelete)
+            outfile2 << triadList[i].operation << '(' << triadList[i].leftOperand->GetOperand() << ", " << triadList[i].rightOperand->GetOperand() << ')' << endl;
+        else
+            outfile2 << endl;
+
+        if (triadList[i].operation == '=' && i != triadList.size() - 1)
+            outfile2 << j++ << ")";
     }
 }
 
@@ -190,8 +198,17 @@ void Analyzer::Optimization()
     {
         try {
             left_id = stoi(triadList[i].leftOperand->GetOperand().substr(1)) - 1;
+        }
+        catch (const std::exception& e) {
+            left_id = 0;
+        }
+        try {
             right_id = stoi(triadList[i].rightOperand->GetOperand().substr(1)) - 1;
-
+        }
+        catch (const std::exception& e) {
+            right_id = 0;
+        }
+        try {
             switch (triadList[i].operation)
             {
             case '|': 
@@ -199,33 +216,32 @@ void Analyzer::Optimization()
                 if (triadList[right_id].operation == 'C')
                 {
                     triadList[right_id].isDelete = true;
-                    triadList[i].rightOperand = new Constant{ static_cast<bool>(stoi(triadList[right_id].leftOperand->GetOperand())) };
+                    triadList[i].rightOperand = new Constant{ stoi(triadList[right_id].leftOperand->GetOperand()) != 0 };
                     if (triadList[left_id].operation == 'C')
                     {
                         triadList[left_id].isDelete = true;
-                        triadList[i].leftOperand = new Constant{ static_cast<bool>(stoi(triadList[left_id].leftOperand->GetOperand())) };
+                        triadList[i].leftOperand = new Constant{ stoi(triadList[left_id].leftOperand->GetOperand()) != 0 };
 
-                        triadList[i].operation = 'C';
                         if (triadList[i].operation == '|')
-                        {
-                            triadList[i].leftOperand = new Constant{ static_cast<bool>(stoi(triadList[left_id].leftOperand->GetOperand()) |
-                                                                                       stoi(triadList[right_id].leftOperand->GetOperand())) };
-                        }
+                        
+                            triadList[i].leftOperand = new Constant{ (stoi(triadList[left_id].leftOperand->GetOperand()) +
+                                                                      stoi(triadList[right_id].leftOperand->GetOperand())) != 0 };
+                        
                         else
-                        {
-                            triadList[i].leftOperand = new Constant{ static_cast<bool>(stoi(triadList[left_id].leftOperand->GetOperand()) &
-                                                                                       stoi(triadList[right_id].leftOperand->GetOperand())) };
-                        }
+                        
+                            triadList[i].leftOperand = new Constant{ (stoi(triadList[left_id].leftOperand->GetOperand()) *
+                                                                      stoi(triadList[right_id].leftOperand->GetOperand())) != 0 };
+                        
+                        triadList[i].operation = 'C';
                         triadList[i].rightOperand = new None{};
                     }
                 }
-
                 break;
             case '~':
                 if (triadList[left_id].operation == 'C')
                 {
                     triadList[left_id].isDelete = true;
-                    triadList[i].leftOperand = new Constant{ static_cast<bool>(~(static_cast<bool>(stoi(triadList[right_id].leftOperand->GetOperand()))))};
+                    triadList[i].leftOperand = new Constant{ !((stoi(triadList[left_id].leftOperand->GetOperand())) != 0) };
                     triadList[i].operation = 'C';
                 }
                 break;
@@ -504,5 +520,5 @@ string None::GetOperand()
 
 void Triad::OutTriad()
 {
-    outfile1 << operation << '(' << leftOperand->GetOperand() << ", " << rightOperand->GetOperand() << ')' << std::endl;
+    outfile1 << operation << '(' << leftOperand->GetOperand() << ", " << rightOperand->GetOperand() << ')' << endl;
 }
