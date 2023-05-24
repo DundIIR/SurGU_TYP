@@ -1,0 +1,8 @@
+(t, false | false)
+(tt, true & false)
+
+(ttt, ~false)
+
+(ttt, ~false & (t | tt))
+
+(tr, ttt)
